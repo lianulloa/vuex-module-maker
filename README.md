@@ -1,13 +1,14 @@
 # VuexModuleMaker
 
-Es un *helper* para crear módulos de **Vuex**. El objetivo principal de este *helper* es disminuir la cantidad de código que es necesario escribir al crear un módulo de **Vuex** y por lo tanto agilizar la creación del mismo.
+It is just an helper to create [Vuex modules](https://vuex.vuejs.org/guide/modules.html).
+Its target is to reduce the amount of code needed to create a Vuex module and thus to keep code DRY
 
-## Inicio Rápido
+## Quick Start
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: {},
   groupingCodes: []
 }
 
@@ -28,63 +29,116 @@ const vuexModule = new VuexModuleMaker(
 ).getModule()
 ```
 
-Este código genera un módulo de **Vuex** siguiendo el *mapping* `standard` de **vuex-pathify**, es decir:
+This code creates a Vuex module following the mapping `standard` of [vuex-pathify](https://davestewart.github.io/vuex-pathify/#/setup/install?id=config), for example:
 
 | state | getter | mutation | action |
 | ----- | ------ | -------- | ------ |
 | foo   | foo    | SET_FOO  | setFoo |
 
-Por lo que, suponiendo que este módulo se registre bajo el nombre de `categories`, el siguiente código sería totalmente válido:
+Hence, assuming this module is registered under the name of `categories`, then the next code is completely valid:
 
 ```javascript
-store.getters["categories/categoriesPlain"]
+store.getters["categories/categoriesPlan"]
 
 store.commit("categories/SET_GROUPING_CODES", groupingCodes)
 
 store.dispatch("categories/createCategory", newCategory)
 ```
 
+## Complex Example
+
+```javascript
+// usersApi is a class with methods to request info from API
+import usersApi from "../../api/users"
+import { VuexModuleMaker, actionConfigs } from "@lianulloa/vuex-module-maker"
+
+const state = {
+  users: [],
+  totalUsers: 0
+}
+
+const vuexModule = new VuexModuleMaker({
+  state,
+  getters: {
+    activeUsers: state => {
+      return state.users.filter(user => user.status === "active")
+    },
+    coolUsers: state => {
+      return state.users.filter(user => user.settings.cool)
+    }
+  },
+  actions: {
+    getUsers: {
+      service: usersApi.list.bind(usersApi),
+      attr: "users",
+      cacheAPIRequestIn: "users/fetchUsers", // cache usersApi.list responses through this action. See vuex-cache
+      ...actionConfigs.common.list
+    },
+    createCustomField: {
+      service: usersApi.create.bind(usersApi),
+      attr: "users",
+      cacheActionToDelete: "users/fetchUsers",
+      ...actionConfigs.common.create
+    },
+    editCustomField: {
+      service: usersApi.edit.bind(usersApi),
+      attr: "users",
+      cacheActionToDelete: "users/fetchUsers",
+      editingRefreshService: usersApi.detail.bind(usersApi),
+      ...actionConfigs.common.edit
+    },
+    deleteCustomField: {
+      service: usersApi.delete.bind(usersApi),
+      cacheActionToDelete: "users/fetchUsers"
+    }
+  }
+})
+
+export default vuexModule.getModule()
+```
+
 ## API
 
-**VuexModuleMaker** no es más que una clase que permite generar un módulo de **Vuex** a partir de pequeñas configuraciones.
+**VuexModuleMaker** is just a class which generate a Vuex module from a few configurations
 
 ### Constructor
 
-El constructor admite dos parámetros, siendo el segundo totalmente opcional.
+The constructor takes two parameters. The second is completely optional.
 
-El primer parámetro es un objeto con la definición del `state`, `getters`, `mutations`, `actions`
+The fist is an object which defines the usual options: `state`, `getters`, `mutations`, `actions`
 
-El segundo parámetro es un objeto de opciones para **Vuex**. Por defecto es: `{ namespaced: true }`
+The second (and last) is an options object for Vuex. By default it look like this: `{ namespaced: true }`
 
-En el caso del state, sigue manteniendo la misma sintaxis. Para el resto quedaría de la siguiente forma:
+`state` keeps its usual syntax. The syntax for `getters`, `mutations`, and `actions` is described below
 
 #### getters
 
 - type: `Object.<string,function|string>`
 - Optional
 
-Por ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
   groupingCodes: []
 }
 
 const getters: {
-  "tree": "categoriesTree",
+  "tree": "categoriesTrie",
   "treeWithFunction": state => {
-    return state.categoriesTree
+    return state.categoriesTrie
   }
 }
 ```
 
-Estos(☝) dos getters registrados son equivalentes.
+These(☝) two getters are equivalents.
 
-De esta forma se puede definir un nombre personalizado para un getter y utilizando directamente una función se puede realizar un definición explicita de lo que se desea retornar.
+This way a custom name can be defined for a getter and/or defined explicitly what is returned
+by using a funciton.
 
-**Nota:** Este parámetro es opcional, ya que automáticamente se genera un getter para cada campo del `state`
+**Note:** This parameter is optional. Getters are defined automatically based on the fields of `state`
 
 #### mutations
 
@@ -95,36 +149,38 @@ Por ejemplo:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
   groupingCodes: []
 }
 
 const mutations: {
-  "SET_CATEG_TREE": "categoriesTree",
-  "SET_CATEG_TREE_WF": (state, payload) => {
-    state["categoriesTree"] = payload
+  "SET_CATEG_TRIE": "categoriesTrie",
+  "SET_CATEG_TRIE_2": (state, payload) => {
+    state["categoriesTrie"] = payload
   }
 }
 ```
 
-Estos(☝) dos mutations registrados son equivalentes.
+These(☝) two mutations are equivalents.
 
-De esta forma se puede definir un nombre personalizado para un mutation y utilizando directamente una función se puede realizar un definición explicita de lo que se desea setear.
+This way a custom name can be defined for a mutation and/or defined explicitly what is setted
+by using a funciton.
 
-**Nota:** Este parámetro es opcional, ya que automáticamente se genera un mutation para cada campo del `state`
+**Note:** This parameter is optional. Mutations are defined automatically based on the fields of `state`
 
 #### actions
 
-- type: `Object.<string,Function| ActionConfig>` Se puede consultar más abajo el formato del [ActionConfig](#actionconfig)
+- type: `Object.<string,Function| ActionConfig>` Below you can see what is an [ActionConfig](#actionconfig)
 - Required
 
-Por ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  category: null
+  categoriesPlan: [],
+  categoriesTrie: [],
   groupingCodes: []
 }
 
@@ -137,11 +193,11 @@ const actions = {
     return new Promise(async (resolve, reject) => {
       try {
         const { data } = await categoriesApiSet.list(query)
-        if (query.format === "plain") {
-          context.commit("SET_CATEGORIES_PLAIN", data)
+        if (query.format === "plan") {
+          context.commit("SET_CATEGORIES_PLAN", data)
           resolve(data)
         } else {
-          context.commit("SET_CATEGORIES_TREE", data)
+          context.commit("SET_CATEGORIES_TRIE", data)
           resolve(data)
         }
       } catch (error) {
@@ -152,13 +208,18 @@ const actions = {
 }
 ```
 
-El caso de `actions` el valor de cada key puede ser una función o un objeto con la configuración necesaria. Si pasa una función, será la definición usual de un action.
+For `actions` each key's value could be a function or an object with the config needed (See [below](#actionconfig)). If a function is used, it MUST comply with the [Vuex's action definition](https://vuex.vuejs.org/guide/actions.html)
 
-En caso de que se pase un objeto, se generará un action que:
-1. Ejecutará una función pasada en el campo `service` pasándole los parámetros que reciba la action al ser llamada
-2. Actualizará el estado con el resultado del llamado a dicho `service`
+If an object is used, it will generate an action which at least will:
 
-Para actualizar el estado se basará en el campo `attr` o `mutation`, en el caso de que este último se defina. En la action de ejemplo se actualizara el campo `category` del state. En cambio, al definir el campo `mutation` se haría `commit` a dicha mutación con el valor que devuelva el `service`. Por ejemplo:
+1. Execute the function passed as `service` field. Parameters received by the action (when it is dispatched) will be forwarded to this `service`
+2. Update `state` with the response from `service`
+
+In order to update `state`, it will use field `attr` (or `mutation` if it is defined)
+In the example above, `category` would be updated when action `createCategory` is dispatched.
+On the other side, if `mutation` is defined, it will be used to update `state` through a `context.commit` call.
+
+Example:
 
 ```javascript
 const actions = {
@@ -169,7 +230,7 @@ const actions = {
 }
 ```
 
-sería equivalente a
+will be the same as doing:
 
 ```javascript
 //...
@@ -178,7 +239,7 @@ context.commit("SET_CATEGORY_BY_HELPER", data)
 //...
 ```
 
-El campo `spreadServiceArgs` del objeto de configuración define si los argumentos pasados al action cuando se llama, debería ser *spreaded* al pasárselos a `service`. Útil para cuando `service` recibe más de un argumento.
+The field `spreadServiceArgs` (See [below](#actionconfig)) controls if actions arguments (when dispatched) should be *spreaded* when forwarded down to `service`. Useful if `service` expect more than one argument.
 
 ```javascript
 if (actionConfig.spreadServiceArgs) {
@@ -189,11 +250,11 @@ if (actionConfig.spreadServiceArgs) {
 }
 ```
 
-de esta manera, es posible llamar a un action con un array de parámetros en caso de ser necesario
+this way, it is possible to dispatch an action with an array of arguments
+de esta manera, es posible llamar a un action con un array de parámetros if necessary
 
 ```javascript
 this.actionToSetItems( [ item1, item2, item3 ] )
-// el service pasado como parámetro sería llamado con todos los parámetros en vez de con una lista
 action.service( item1, item2, item3 )
 ```
 
@@ -201,14 +262,14 @@ action.service( item1, item2, item3 )
 
 #### getModule
 
-Genera el módulo de **Vuex**
+Creates the Vuex module
 
-Ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
   groupingCodes: []
 }
 
@@ -237,16 +298,16 @@ const store = new Vuex.Store({
 
 #### addGetter
 
-Añade un getter
+Adds a getter
 
 `@param {Object.<string,function|string>} getter`
 
-Ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
   groupingCodes: []
 }
 
@@ -275,16 +336,16 @@ vuexHelper.addGetter({
 
 #### addMutation
 
-Añade una mutation
+Adds a mutation
 
 `@param {Object.<string,function|string>} mutation`
 
-Ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
   groupingCodes: []
 }
 
@@ -307,23 +368,23 @@ const vuexHelper = new VuexModuleMaker(
 vuexHelper.addMutation({customGetterName: "groupingCodes"})
 vuexHelper.addMutation({
   customGetterName: (state, payload) => {
-    state["categoriesTree"] = payload
+    state["categoriesTrie"] = payload
   }
 )
 ```
 
 #### addAction
 
-Añade una acción
+Adds an action
 
 `@param {actionName, action} action`
 
-Ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
   groupingCodes: []
 }
 
@@ -354,14 +415,14 @@ vuexHelper.addAction({
 
 #### buildGetters
 
-Genera los getters
+Generates the getters
 
-Ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
 }
 
 const vuexHelper = new VuexModuleMaker(
@@ -371,22 +432,22 @@ const vuexHelper = new VuexModuleMaker(
 vuexHelper.buildGetters()
 /*
 {
-  categoriesPlain: state => state.categoriesPlain
-  categoriesTree: state => state.categoriesTree
+  categoriesPlan: state => state.categoriesPlan
+  categoriesTrie: state => state.categoriesTrie
 }
 */
 ```
 
 #### buildMutations
 
-Genera los mutations
+Generates the mutations
 
-Ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
 }
 
 const vuexHelper = new VuexModuleMaker(
@@ -396,22 +457,22 @@ const vuexHelper = new VuexModuleMaker(
 vuexHelper.buildMutations()
 /*
 {
-  SET_CATEGORIES_PLAIN: (state, payload) => state.categoriesPlain = payload
-  SET_CATEGORIES_TREE: (state, payload) => state.categoriesTree = payload
+  SET_CATEGORIES_PLAIN: (state, payload) => state.categoriesPlan = payload
+  SET_CATEGORIES_TREE: (state, payload) => state.categoriesTrie = payload
 }
 */
 ```
 
 #### buildActions
 
-Genera los actions
+Generates the actions
 
-Ejemplo:
+Example:
 
 ```javascript
 const state = {
-  categoriesPlain: [],
-  categoriesTree: [],
+  categoriesPlan: [],
+  categoriesTrie: [],
 }
 
 const vuexHelper = new VuexModuleMaker({
@@ -450,3 +511,7 @@ The action configuration object
  * @property {boolean}  [hasMetadata] - Whether response will included a metadata field. If metadata is true, then mutation MUST NOT be defined
  * @property {String}   [cacheAPIRequestIn] - Name of an action, automatically created, to cache API resquest made through service
  * @property {boolean}  [cacheActionToDelete] - Name of an action to delete from cache after the request to API. If it is not in cache, it does nothing
+
+## Dependencies
+
+- [vuex-cache](https://github.com/superwf/vuex-cache) It MUST be installed be consumer in order to cache actions
