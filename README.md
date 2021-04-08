@@ -116,7 +116,7 @@ De esta forma se puede definir un nombre personalizado para un mutation y utiliz
 
 #### actions
 
-- type: `Object.<string,Function| {service: Function, attr: string, mutation?: string, spreadServiceArgs?: bool}>`
+- type: `Object.<string,Function| [ActionConfig](#actionconfig) >`
 - Required
 
 Por ejemplo:
@@ -434,3 +434,19 @@ vuexHelper.buildActions()
 }
 */
 ```
+
+### ActionConfig
+
+The action configuration object
+ * @typedef {Object} ActionConfig
+ * @property {Function} service - Service used to obtain data
+ * @property {String}   attr - The attribute of the state which will contain the data (if any)
+ * @property {String}   [mutation] - Mutation to used to set data when it is not the default for the attr
+ * @property {boolean}  [spreadServiceArgs] - Whether action argument should be spreaded into the service
+ * @property {boolean}  [append] - Whether data should be appended to existing data in a list format if requestBody.append === true
+ * @property {boolean}  [appendAlways] - Whether data should be appended to existing data in a list format even though is not requested
+ * @property {boolean}  [editing] - Whether it is an editing action. CANNOT be used along with append or appendAlways
+ * @property {Function}  [editingRefreshService] - Service used to refresh an edited document. MUST be defined if requestBody.refresh
+ * @property {boolean}  [hasMetadata] - Whether response will included a metadata field. If metadata is true, then mutation MUST NOT be defined
+ * @property {String}   [cacheAPIRequestIn] - Name of an action, automatically created, to cache API resquest made through service
+ * @property {boolean}  [cacheActionToDelete] - Name of an action to delete from cache after the request to API. If it is not in cache, it does nothing

@@ -31,7 +31,7 @@ export default class VuexModuleMaker {
   /**
    * @param {Config} config
    */
-  constructor({ state, getters = {}, mutations = {}, actions }, options = { namespaced: true }) {
+  constructor({ state, getters = {}, mutations = {}, actions = {} }, options = { namespaced: true }) {
     this._state = state
     this._getters = [...Object.keys(state), getters]
     this._actions = actions
@@ -56,7 +56,6 @@ export default class VuexModuleMaker {
     const defaultMutations = new Set(Object.keys(state))
     //Add mutations as needed in actions
     let mutationsNeeded = new Set(
-      //FIXME: this makes actions required so better check if actions and then get the values
       Object.values(actions)
         .filter(action => typeof action === "object" && !action.mutation)
         .map(action => action.attr)
@@ -247,9 +246,7 @@ export default class VuexModuleMaker {
       const documents = config.state[config.attr]
       const updatedDocumentIndex = documents.findIndex(document => document.id === preparedData.id)
       if (config.refresh) {
-        const response = await config.editingRefreshService(preparedData.id, {
-          fields: "editable,deletable"
-        })
+        const response = await config.editingRefreshService(preparedData.id)
         preparedData = response.data
       }
       documents[updatedDocumentIndex] = preparedData
