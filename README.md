@@ -116,7 +116,7 @@ De esta forma se puede definir un nombre personalizado para un mutation y utiliz
 
 #### actions
 
-- type: `Object.<string,Function| [ActionConfig](#actionconfig) >`
+- type: `Object.<string,Function| ActionConfig>` Se puede consultar más abajo el formato del [ActionConfig](#actionconfig)
 - Required
 
 Por ejemplo:
