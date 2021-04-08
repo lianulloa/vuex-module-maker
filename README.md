@@ -514,4 +514,4 @@ The action configuration object
 
 ## Dependencies
 
-- [vuex-cache](https://github.com/superwf/vuex-cache) It MUST be installed be consumer in order to cache actions
+- [vuex-cache](https://github.com/superwf/vuex-cache) It MUST be installed by consumer in order to cache actions
