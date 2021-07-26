@@ -26,12 +26,13 @@
 
 import { getFieldFrom, camelToUpSnake } from "./utils/jsHelpers"
 import { cacheAction } from "vuex-cache"
+import actionConfigs from "./actionConfigs"
 
 export default class VuexModuleMaker {
   /**
    * @param {Config} config
    */
-  constructor({ state, getters = {}, mutations = {}, actions = {} }, options = { namespaced: true }) {
+  constructor({ state = {}, getters = {}, mutations = {}, actions = {} }, options = { namespaced: true }) {
     this._state = state
     this._getters = [...Object.keys(state), getters]
     this._actions = actions
@@ -243,7 +244,7 @@ export default class VuexModuleMaker {
     if (config.append) {
       return Array.prototype.concat(config.state[config.attr], preparedData)
     } else if (config.editing) {
-      const documents = config.state[config.attr]
+      const documents = [...config.state[config.attr]] //destructure array to ensure reactivity
       const updatedDocumentIndex = documents.findIndex(document => document.id === preparedData.id)
       if (config.refresh) {
         const response = await config.editingRefreshService(preparedData.id)
@@ -307,3 +308,5 @@ export default class VuexModuleMaker {
     }
   }
 }
+
+export { actionConfigs }
