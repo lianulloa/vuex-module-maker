@@ -1,8 +1,14 @@
 const path = require("path")
+const webpack = require("webpack")
+
+const sourceMap = new webpack.SourceMapDevToolPlugin({
+  filename: '[name].js.map'
+})
 
 module.exports = {
   mode: "production",
   entry: "./index.js",
+  plugins: [sourceMap],
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "vuex-module-maker.js",

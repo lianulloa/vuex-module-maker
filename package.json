@@ -2,7 +2,7 @@
   "name": "@lianulloa/vuex-module-maker",
   "description": "A helper to reduce repetition inside Vuex modules",
   "repository": "https://github.com/lianulloa/vuex-module-maker",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "keywords": [
     "vuex",
     "module",
@@ -26,5 +26,8 @@
     "vuex-cache": "^3.3.0",
     "webpack": "^5.30.0",
     "webpack-cli": "^4.6.0"
+  },
+  "dependencies": {
+    "broadcast-channel": "^4.2.0"
   }
 }

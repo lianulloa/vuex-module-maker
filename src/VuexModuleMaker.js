@@ -27,12 +27,13 @@
 import { getFieldFrom, camelToUpSnake } from "./utils/jsHelpers"
 import { cacheAction } from "vuex-cache"
 import actionConfigs from "./actionConfigs"
+import { getChannel } from "./channel"
 
 export default class VuexModuleMaker {
   /**
    * @param {Config} config
    */
-  constructor({ state = {}, getters = {}, mutations = {}, actions = {} }, options = { namespaced: true }) {
+  constructor({ state = {}, getters = {}, mutations = {}, actions = {} }, options = { namespaced: true, moduleName: "" }) {
     this._state = state
     this._getters = [...Object.keys(state), getters]
     this._actions = actions
@@ -177,12 +178,12 @@ export default class VuexModuleMaker {
         // As an optional field it could contain a "mutation" field, which should be the
         // name of a vuex mutation available in this module
         const actionConfig = this._actions[action]
+        let clearAction
         if (actionConfig.cacheAPIRequestIn) {
           actions[actionConfig.cacheAPIRequestIn] = this._createFetchAction(actionConfig)
-          const [, action] = actionConfig.cacheAPIRequestIn.split("/")
-          actions[
-            `clear${action[0].toUpperCase() + action.slice(1)}`
-          ] = this._createClearCacheAction(actionConfig.cacheAPIRequestIn)
+          // const [, action] = actionConfig.cacheAPIRequestIn.split("/")
+          clearAction = this._getClearActionName(actionConfig.cacheAPIRequestIn)
+          actions[clearAction] = this._createClearCacheAction(actionConfig.cacheAPIRequestIn)
         }
 
         actions[action] = this.buildAction(actionConfig)
@@ -203,6 +204,12 @@ export default class VuexModuleMaker {
         try {
           if (cache && actionConfig.cacheActionToDelete) {
             this._deleteCacheAction(cache, actionConfig.cacheActionToDelete)
+
+            const channel = getChannel()
+            channel.postMessage({
+              type: "dispatch",
+              payload: `${this.options.moduleName}/${this._getClearActionName(actionConfig.cacheActionToDelete)}`
+            })
           }
 
           let data =
@@ -306,6 +313,11 @@ export default class VuexModuleMaker {
       }
       this._cachedActions[actionToDelete] = new Set()
     }
+  }
+
+  _getClearActionName(actionToClear) {
+    const [, action] = actionToClear.split("/")
+    return `clear${action[0].toUpperCase() + action.slice(1)}`
   }
 }
 
