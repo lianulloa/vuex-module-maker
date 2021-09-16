@@ -97,6 +97,56 @@ const vuexModule = new VuexModuleMaker({
 export default vuexModule.getModule()
 ```
 
+## Clearing cache in all open tabs
+
+**Available from version 1.1.0+**  
+Your user can have two or more tabs of your app open in the browser, and these tabs will be using different instances of your store, thus different instances of the cache. So it could be useful, that when some part of the cache gets cleaned in one tab, that change gets reflected in all open tabs.
+
+To enable this behavior, takes just two simple steps:
+
+1. Register the plugin `createChannel` in the store
+
+  ```javascript
+  import { createChannel } from "@lianulloa/vuex-module-maker"
+
+  export default new Vuex.Store({
+    plugins: [ createChannel( {channelName:"any-name"} ) ],
+    modules: {
+      todos
+    }
+  })
+  ```
+
+2. Set the module name as an option to the `VuexModuleMaker` constructor
+  
+  ```javascript
+  const state = {
+    todos: []
+  }
+
+  const vuexModule = new VuexModuleMaker({
+    state,
+    actions: {
+      getC: {
+        service: list,
+        attr: "todos",
+        cacheAPIRequestIn: "todos/fetchTodos",
+      },
+      createC: {
+        service: create,
+        attr: "todos",
+        cacheActionToDelete: "todos/fetchTodos",
+      }
+    }
+  }, { namespaced: true, moduleName: "todos" }) // Note the field moduleName
+
+  export default vuexModule.getModule()
+  ```
+
+  The module name MUST match with how you register the module at the first step
+
+  That's it. Now whenever one part of the store's cache gets cleared, it will do the same in all the open tabs of your app
+
 ## API
 
 **VuexModuleMaker** is just a class which generate a Vuex module from a few configurations
