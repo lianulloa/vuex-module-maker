@@ -206,10 +206,12 @@ export default class VuexModuleMaker {
             this._deleteCacheAction(cache, actionConfig.cacheActionToDelete)
 
             const channel = getChannel()
-            channel.postMessage({
-              type: "dispatch",
-              payload: `${this.options.moduleName}/${this._getClearActionName(actionConfig.cacheActionToDelete)}`
-            })
+            if (channel) {
+              channel.postMessage({
+                type: "dispatch",
+                payload: `${this.options.moduleName}/${this._getClearActionName(actionConfig.cacheActionToDelete)}`
+              })
+            }
           }
 
           let data =
