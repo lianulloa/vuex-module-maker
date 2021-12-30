@@ -9,7 +9,8 @@
     "helper",
     "dry",
     "maker",
-    "cache"
+    "cache",
+    "broadcast"
   ],
   "main": "dist/vuex-module-maker.js",
   "scripts": {
