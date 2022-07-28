@@ -3,6 +3,13 @@
 It is just an helper to create [Vuex modules](https://vuex.vuejs.org/guide/modules.html).
 Its target is to reduce the amount of code needed to create a Vuex module and thus to keep code DRY
 
+## Install
+```sh
+yarn add @lianulloa/vuex-module-maker
+# or
+npm i @lianulloa/vuex-module-maker
+```
+
 ## Quick Start
 
 ```javascript
