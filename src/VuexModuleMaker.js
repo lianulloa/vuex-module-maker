@@ -25,7 +25,7 @@
  */
 
 import { getFieldFrom, camelToUpSnake } from "./utils/jsHelpers"
-import { cacheAction } from "vuex-cache"
+import messages from './utils/messages'
 import actionConfigs from "./actionConfigs"
 import { getChannel } from "./channel"
 
@@ -33,15 +33,30 @@ export default class VuexModuleMaker {
   /**
    * @param {Config} config
    */
-  constructor({ state = {}, getters = {}, mutations = {}, actions = {} }, options = { namespaced: true, moduleName: "" }) {
-    this._state = state
-    this._getters = [...Object.keys(state), getters]
+  constructor(
+    { state = {}, getters = {}, mutations = {}, actions = {} },
+    options = { namespaced: true, moduleName: '' }
+  ) {
+    this._state = typeof state === 'function' ? state() : state
+    this._getters = [
+      ...Object.keys(typeof state === 'function' ? state() : state),
+      getters,
+    ]
     this._actions = actions
     this.options = options
 
-    this._mutations = [...this._getDefaultMutations(state, actions), mutations]
+    this._mutations = [
+      ...this._getDefaultMutations(this._state, actions),
+      mutations,
+    ]
 
     this._cachedActions = {}
+
+    try {
+      this.vuexCache = require('vuex-cache')
+    } catch (e) {
+      this.vuexCache = {}
+    }
   }
 
   getModule() {
@@ -50,14 +65,14 @@ export default class VuexModuleMaker {
       getters: this.buildGetters(),
       mutations: this.buildMutations(),
       actions: this.buildActions(),
-      ...this.options
+      ...this.options,
     }
   }
 
   _getDefaultMutations(state, actions) {
     const defaultMutations = new Set(Object.keys(state))
-    //Add mutations as needed in actions
-    let mutationsNeeded = new Set(
+    // Add mutations as needed in actions
+    const mutationsNeeded = new Set(
       Object.values(actions)
         .filter(action => typeof action === "object" && !action.mutation)
         .map(action => action.attr)
@@ -139,6 +154,7 @@ export default class VuexModuleMaker {
     }
     return getters
   }
+
   buildMutations() {
     const mutations = {}
     for (const mutation of this._mutations) {
@@ -164,25 +180,38 @@ export default class VuexModuleMaker {
     }
     return mutations
   }
+
   buildActions() {
     const actions = {}
     // Every key of actions's object is going to be used as the name of the action
     for (const action in this._actions) {
-      if (typeof this._actions[action] === "function") {
+      if (typeof this._actions[action] === 'function') {
         // if the value is a function then it is a whole action definition
         actions[action] = this._actions[action]
-      } else if (typeof this._actions[action] === "object") {
+      } else if (typeof this._actions[action] === 'object') {
         // if the value is a object then it contains: a reference to the api service
         // that must be used, stored in field "service", a string with the name of the
         // field of state where the response will be saved stored in "attr".
         // As an optional field it could contain a "mutation" field, which should be the
         // name of a vuex mutation available in this module
         const actionConfig = this._actions[action]
-        let clearAction
+
+        if (
+          (actionConfig.cacheAPIRequestIn ||
+            actionConfig.cacheActionToDelete) &&
+          !this.vuexCache.cacheAction
+        ) {
+          delete actionConfig.cacheAPIRequestIn
+          delete actionConfig.cacheActionToDelete
+          console.warn(
+            `${messages.prefix} ${messages.warnings.vuexCache.peerDependency}\nCheck '${action}' action`
+          )
+        }
+
         if (actionConfig.cacheAPIRequestIn) {
-          actions[actionConfig.cacheAPIRequestIn] = this._createFetchAction(actionConfig)
-          // const [, action] = actionConfig.cacheAPIRequestIn.split("/")
-          clearAction = this._getClearActionName(actionConfig.cacheAPIRequestIn)
+          actions[actionConfig.cacheAPIRequestIn] =
+            this._createFetchAction(actionConfig)
+          const clearAction = this._getClearActionName(actionConfig.cacheAPIRequestIn)
           actions[clearAction] = this._createClearCacheAction(actionConfig.cacheAPIRequestIn)
         }
 
@@ -191,13 +220,14 @@ export default class VuexModuleMaker {
     }
     return actions
   }
+
   buildAction(actionConfig) {
     // TODO: allow to define cache timeout through dispatch
     const action = ({ commit, state, cache }, requestBody) => {
       let append = actionConfig.appendAlways || (actionConfig.append && requestBody?.append)
       let refresh = requestBody?.refresh && actionConfig.editingRefreshService
       if (requestBody) {
-        delete requestBody["append"]
+        delete requestBody.append
       }
 
       return new Promise(async (resolve, reject) => {
@@ -227,7 +257,7 @@ export default class VuexModuleMaker {
             commit(
               actionConfig.mutation
                 ? actionConfig.mutation
-                : "SET_" + camelToUpSnake(actionConfig.attr),
+                : 'SET_' + camelToUpSnake(actionConfig.attr),
               await this._prepareDataToCommit(data, { ...actionConfig, append, state, refresh })
             )
           }
@@ -240,7 +270,7 @@ export default class VuexModuleMaker {
     }
 
     return actionConfig.cacheAPIRequestIn || actionConfig.cacheActionToDelete
-      ? cacheAction(action)
+      ? this.vuexCache.cacheAction(action)
       : action
   }
 
@@ -253,7 +283,7 @@ export default class VuexModuleMaker {
     if (config.append) {
       return Array.prototype.concat(config.state[config.attr], preparedData)
     } else if (config.editing) {
-      const documents = [...config.state[config.attr]] //destructure array to ensure reactivity
+      const documents = [...config.state[config.attr]] // destructure array to ensure reactivity
       const updatedDocumentIndex = documents.findIndex(document => document.id === preparedData.id)
       if (config.refresh) {
         const response = await config.editingRefreshService(preparedData.id)
@@ -290,7 +320,7 @@ export default class VuexModuleMaker {
   }
 
   _createClearCacheAction(actionToDelete) {
-    return cacheAction(context => {
+    return this.vuexCache.cacheAction(context => {
       this._deleteCacheAction(context.cache, actionToDelete)
     })
   }
