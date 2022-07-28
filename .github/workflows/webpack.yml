@@ -1,8 +1,6 @@
 name: NodeJS with Webpack
 
 on:
-  push:
-    branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
     types:
@@ -29,3 +27,5 @@ jobs:
       run: |
         npm install
         npm run build
+
+    - uses: stefanzweifel/git-auto-commit-action@v4
